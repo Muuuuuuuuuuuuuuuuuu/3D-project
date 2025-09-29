@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <title>Gingerbread-Robot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>html,body{height:100%;margin:0} canvas{display:block}</style>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dat.gui/build/dat.gui.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+<script>
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);
+
+    const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
+    camera.position.set(0, 5, 25);
+
+    const vertices = [];
+    const uvs = [];
+
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geom.computeVertexNormals();
+
+    const loader = new THREE.TextureLoader();
+    const baseColor= loader.load('https://github.com/Muuuuuuuuuuuuuuuuuu/muuuu/Cat_UV_low_Cat_Ninja_Body_BaseColor_4.jpeg');
+    const AO = loader.load('https://github.com/Muuuuuuuuuuuuuuuuuu/muuuu/internal_ground_ao_texture.jpeg');
+    const normalMap = loader.load('https://github.com/Muuuuuuuuuuuuuuuuuu/muuuu/Cat_UV_low_Cat_Ninja_Body_Metallic-Cat_UV_low_Cat_Ninja_Body.png');
+    const roughnessMap = loader.load('https://github.com/Muuuuuuuuuuuuuuuuuu/muuuu/Cat_UV_low_Cat_Ninja_Body_Normal_3.jpeg');
+
+    baseColor.encoding = THREE.sRGBEncoding;
+    AO.encoding = THREE.sRGBEncoding;
+
+    const mat = new THREE.MeshStandardMaterial({
+      map: baseColor,
+      AO: AO,
+      emissive: new THREE.Color(0xffffff),
+      roughnessMap: roughnessMap,
+      roughness: 1.0,
+      normalMap: normalMap,
+    });
+
+    const mesh = new THREE.Mesh(geom, mat);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.shadowMap.enabled = true;
+    renderer.physicallyCorrectLights = true;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+    document.body.appendChild(renderer.domElement);
+
+    new THREE.OrbitControls(camera, renderer.domElement);
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 0.6)); 
+    const dir = new THREE.DirectionalLight(0xffffff, 3.0);
+    dir.position.set(3, 5, 2);
+    dir.castShadow = true;
+    scene.add(dir);
+    
+
+    const textureLoader = new THREE.TextureLoader();
+    const groundTexture = textureLoader.load('https://tywjof-busnaw-fibhy3.github.io/AYANEE/grassy_cobblestone_diff_2k.jpg');
+    groundTexture.wrapS = THREE.RepeatWrapping;
+    groundTexture.wrapT = THREE.RepeatWrapping;
+    groundTexture.repeat.set(10, 10);
+
+    const ground = new THREE.Mesh(
+        new THREE.PlaneBufferGeometry(40, 40),
+        new THREE.MeshStandardMaterial({ map: groundTexture, roughness: 0.9, metalness: 0.0 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    new THREE.RGBELoader()
+    .setDataType(THREE.UnsignedByteType)
+    .load('https://tywjof-busnaw-fibhy3.github.io/AYANEE/spruit_sunrise_2k.hdr', function(texture) {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        scene.background = texture;
+        scene.environment = texture;
+    });
+
+    addEventListener('resize', ()=>{
+        camera.aspect = innerWidth/innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+    });
+
+    let t = 0;
+    (function loop(){
+        t += 0.01;
+        dir.position.x = 3 + Math.sin(t)*1.0;
+        renderer.render(scene, camera);
+        requestAnimationFrame(loop);
+    })();
+
+    
+</script>
+</body>
+</html>
