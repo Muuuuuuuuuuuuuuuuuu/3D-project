@@ -8,6 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dat.gui/build/dat.gui.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
@@ -95,6 +96,25 @@ const uvs = [
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.background = texture;
         scene.environment = texture;
+    });
+
+    const loader1 = new THREE.GLTFLoader();
+    loader1.load('https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/Textname.glb', function(gltf) {
+    const model = gltf.scene;
+    scene.add(model);
+
+    model.position.set(0, 6, 0);      // ลอยขึ้น
+    model.rotation.x = Math.PI / 2;   // ตั้งตรง
+    model.rotation.y = 0;             // ไม่หมุนไปข้าง
+    camera.position.set(0, 5, 15);     // ถอยกล้องออกมาหน่อยให้เห็นชัด
+    });
+
+
+    // ปรับขนาดตามหน้าต่าง
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
     addEventListener('resize', ()=>{
