@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="utf-8" />
-  <title> 3D </title>
+  <title>supattra</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     html,body{height:100%;margin:0;overflow:hidden}
@@ -16,12 +16,12 @@
 </head>
 <body>
 <script>
-  // === Scene / Camera / Renderer ===
+  // Scene / Camera / Renderer
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
 
   const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
-  camera.position.set(-0.5, 15, 20);
+  camera.position.set(-0.5, 15, 18);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(innerWidth, innerHeight);
@@ -35,14 +35,14 @@
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // === Lights ===
+ // แสง
   scene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 0.6));
   const dir = new THREE.DirectionalLight(0xffffff, 3.0);
   dir.position.set(3, 5, 2);
   dir.castShadow = true;
   scene.add(dir);
 
-  // === Environment ===
+  // envMap ช่วยเพิ่มความสมจริงของการสะท้อน/หักเห
   const envMap = new THREE.CubeTextureLoader().load([
     'https://threejs.org/examples/textures/cube/Bridge2/posx.jpg',
     'https://threejs.org/examples/textures/cube/Bridge2/negx.jpg',
@@ -55,8 +55,8 @@
   scene.environment = envMap;
 
   //โมหลัก
-  const loader_ = new THREE.GLTFLoader();
-  loader_.load(
+  const loader_1 = new THREE.GLTFLoader();
+  loader_1.load(
     'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/sky.glb',
     function (gltf) {
       const model = gltf.scene;
@@ -65,21 +65,32 @@
       scene.add(model);
     },
   );
-
-  const loader_1 = new THREE.GLTFLoader();
-  loader_1.load(
-    'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/name.glb',
+  //โมชื่อ
+  const loader_2 = new THREE.GLTFLoader();
+  loader_2.load(
+    'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/namee.glb',
     function (gltf) {
       const model = gltf.scene;
-      model.position.set(2, 20, 25);
-      model.scale.set(5, 5, 5);
+      model.position.set(-9, -19, 8);
+      model.scale.set(1, 1, 1);
       scene.add(model);
     },
   );
 
-  //โมกี่ยวกกับฉัน
-  const loader_2 = new THREE.GLTFLoader();
-  loader_2.load(
+  //รูปคนน่ารัก
+  const textureLoader = new THREE.TextureLoader();
+        const handsomeTexture = textureLoader.load('https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/picture.jpg');
+        const geo = new THREE.BoxGeometry(30, 40, 0.1);
+        const mat = new THREE.MeshBasicMaterial({ map: handsomeTexture, color: 0x808080 });
+        const cube = new THREE.Mesh(geo, mat);
+        cube.position.set(-12.5, -14.5, 1.1);
+        cube.scale.set(0.1, 0.1, 0.1);
+        cube.rotation.y = Math.PI / 1.4 ;
+        scene.add(cube);
+
+  //ข้อมูลความลับ
+  const loader_3 = new THREE.GLTFLoader();
+  loader_3.load(
     'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/aboutme.glb', 
     function (gltf) {
       const model = gltf.scene;
@@ -87,29 +98,33 @@
       model.scale.set(2, 2, 2);
       scene.add(model);
 
+      // === เพิ่มระบบคลิกเพื่อเลื่อนกล้อง ===
       const raycaster = new THREE.Raycaster();
       const pointer = new THREE.Vector2();
-      let moveTarget = null; 
+      let moveTarget = null; // จุดที่กล้องจะเลื่อนไป
 
+      // ฟังก์ชันคำนวณตำแหน่งเมาส์
       function setPointer(e) {
         const r = renderer.domElement.getBoundingClientRect();
         pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1; 
         pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
       }
 
+      // คลิกโมเดล
       renderer.domElement.addEventListener('click', (e) => {
         setPointer(e);
         raycaster.setFromCamera(pointer, camera);
         const intersects = raycaster.intersectObject(model, true); // ตรวจคลิกเฉพาะ aboutme.glb
         if (intersects.length > 0) {
-          // ถ้าคลิกโดน 
+          // ถ้าคลิกโดน → ตั้งค่าจุดใหม่ที่กล้องจะเลื่อนไป
           moveTarget = {
-            pos: new THREE.Vector3(-25, -16, 20),  
-            tar: new THREE.Vector3(-2, -10, 4)    
+            pos: new THREE.Vector3(-25, -12, 16),  // จุดที่กล้องจะเลื่อนไป (เปลี่ยนได้ตามต้องการ)
+            tar: new THREE.Vector3(-2, -10, 4)    // กล้องจะมองไปที่จุดนี้
           };
         }
       });
 
+// === วนลูปเรนเดอร์ ===
     let t = 0;
     (function loop() {
       t += 0.01;
@@ -118,7 +133,8 @@
       if (moveTarget) {
         camera.position.lerp(moveTarget.pos, 0.05);
         controls.target.lerp(moveTarget.tar, 0.05);
-        
+
+        // ถ้ากล้องถึงเป้าหมายแล้ว → เปิดเมาส์
         if (camera.position.distanceTo(moveTarget.pos) < 0.1) {
           controls.enabled = true;
           moveTarget = null;
@@ -131,11 +147,21 @@
     })();
   }
 );
+  // === ปรับขนาดเมื่อเปลี่ยนหน้าจอ ===
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
   });
+
+   let t = 0;
+  (function loop(){
+    t += 0.01;
+    ball.rotation.y += 0.01;
+    dir.position.x = 3 + Math.sin(t)*1.0;
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+  })();
 </script>
 </body>
 </html>
