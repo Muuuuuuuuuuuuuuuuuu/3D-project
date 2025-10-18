@@ -98,33 +98,30 @@
       model.scale.set(2, 2, 2);
       scene.add(model);
 
-      // === เพิ่มระบบคลิกเพื่อเลื่อนกล้อง ===
       const raycaster = new THREE.Raycaster();
       const pointer = new THREE.Vector2();
-      let moveTarget = null; // จุดที่กล้องจะเลื่อนไป
+      let moveTarget = null; 
 
-      // ฟังก์ชันคำนวณตำแหน่งเมาส์
       function setPointer(e) {
         const r = renderer.domElement.getBoundingClientRect();
         pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1; 
         pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
       }
 
-      // คลิกโมเดล
+      // คลิกโม
       renderer.domElement.addEventListener('click', (e) => {
         setPointer(e);
         raycaster.setFromCamera(pointer, camera);
         const intersects = raycaster.intersectObject(model, true); // ตรวจคลิกเฉพาะ aboutme.glb
         if (intersects.length > 0) {
-          // ถ้าคลิกโดน → ตั้งค่าจุดใหม่ที่กล้องจะเลื่อนไป
+          // ถ้าคลิกโดน 
           moveTarget = {
-            pos: new THREE.Vector3(-25, -12, 16),  // จุดที่กล้องจะเลื่อนไป (เปลี่ยนได้ตามต้องการ)
-            tar: new THREE.Vector3(-2, -10, 4)    // กล้องจะมองไปที่จุดนี้
+            pos: new THREE.Vector3(-25, -12, 16), 
+            tar: new THREE.Vector3(-2, -10, 4)   
           };
         }
       });
 
-// === วนลูปเรนเดอร์ ===
     let t = 0;
     (function loop() {
       t += 0.01;
@@ -133,8 +130,7 @@
       if (moveTarget) {
         camera.position.lerp(moveTarget.pos, 0.05);
         controls.target.lerp(moveTarget.tar, 0.05);
-
-        // ถ้ากล้องถึงเป้าหมายแล้ว → เปิดเมาส์
+        
         if (camera.position.distanceTo(moveTarget.pos) < 0.1) {
           controls.enabled = true;
           moveTarget = null;
@@ -147,7 +143,7 @@
     })();
   }
 );
-  // === ปรับขนาดเมื่อเปลี่ยนหน้าจอ ===
+
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
@@ -165,3 +161,4 @@
 </script>
 </body>
 </html>
+
