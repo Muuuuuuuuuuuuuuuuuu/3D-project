@@ -11,14 +11,16 @@
 
   <!-- Three.js -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.17"></script>
 </head>
 <body>
 <script>
   // Scene / Camera / Renderer
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x000000);
 
   const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
   camera.position.set(-0.5, 15, 18);
@@ -35,26 +37,47 @@
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
- // แสง
+  // แสง
   scene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 0.6));
   const dir = new THREE.DirectionalLight(0xffffff, 3.0);
   dir.position.set(3, 5, 2);
   dir.castShadow = true;
   scene.add(dir);
 
-  // envMap ช่วยเพิ่มความสมจริงของการสะท้อน/หักเห
-  const envMap = new THREE.CubeTextureLoader().load([
-    'https://threejs.org/examples/textures/cube/Bridge2/posx.jpg',
-    'https://threejs.org/examples/textures/cube/Bridge2/negx.jpg',
-    'https://threejs.org/examples/textures/cube/Bridge2/posy.jpg',
-    'https://threejs.org/examples/textures/cube/Bridge2/negy.jpg',
-    'https://threejs.org/examples/textures/cube/Bridge2/posz.jpg',
-    'https://threejs.org/examples/textures/cube/Bridge2/negz.jpg'
-  ]);
-  envMap.encoding = THREE.sRGBEncoding;
-  scene.environment = envMap;
+  // HDR Environment Map
+  const pmremGenerator = new THREE.PMREMGenerator(renderer);
+  pmremGenerator.compileEquirectangularShader();
 
-  //โมหลัก
+  new THREE.RGBELoader()
+    .load('https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/crystal_falls_1k.hdr', 
+      function (hdrEquirect) {
+        const envMap = pmremGenerator.fromEquirectangular(hdrEquirect).texture;
+        scene.background = envMap;
+        scene.environment = envMap;
+        
+        hdrEquirect.dispose();
+        pmremGenerator.dispose();
+      },
+      undefined,
+      function(error) {
+        console.error('Error loading HDR:', error);
+      }
+    );
+
+  // โมนก
+  const loader_111 = new THREE.GLTFLoader();
+  loader_111.load(
+    'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/bird.glb',
+    function (gltf) {
+      const model = gltf.scene;
+      model.position.set(5, 11, 11);
+      model.scale.set(2, 2, 2);
+      model.rotation.y = Math.PI / 10;
+      scene.add(model);
+    },
+  );
+
+  // โมหลัง
   const loader_1 = new THREE.GLTFLoader();
   loader_1.load(
     'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/sky.glb',
@@ -65,42 +88,91 @@
       scene.add(model);
     },
   );
-  //โมชื่อ
+
+  // ตัวแปรเก็บโมเดลและสถานะ
+  let nameModel, kuModel, nextModel, aboutmeModel, backModel;
+  let currentStep = 0; // 0=หน้าหลัก, 1=แสดงชื่อ+รูป, 2=แสดง KU
+  let moveTarget = null;
+
+  // โมชื่อ (ซ่อนไว้ก่อน)
   const loader_2 = new THREE.GLTFLoader();
   loader_2.load(
-    'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/namee.glb',
+    'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/nname.glb',
     function (gltf) {
-      const model = gltf.scene;
-      model.position.set(-9, -19, 8);
-      model.scale.set(1, 1, 1);
-      scene.add(model);
+      nameModel = gltf.scene;
+      nameModel.position.set(-9, -19, 8);
+      nameModel.scale.set(1, 1, 1);
+      nameModel.visible = false;
+      scene.add(nameModel);
     },
   );
 
-  //รูปคนน่ารัก
+  // รูปคนน่ารัก (ซ่อนไว้ก่อน)
   const textureLoader = new THREE.TextureLoader();
-        const handsomeTexture = textureLoader.load('https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/picture.jpg');
-        const geo = new THREE.BoxGeometry(30, 40, 0.1);
-        const mat = new THREE.MeshBasicMaterial({ map: handsomeTexture, color: 0x808080 });
-        const cube = new THREE.Mesh(geo, mat);
-        cube.position.set(-12.5, -14.5, 1.1);
-        cube.scale.set(0.1, 0.1, 0.1);
-        cube.rotation.y = Math.PI / 1.4 ;
-        scene.add(cube);
+  const handsomeTexture = textureLoader.load('https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/picture.jpg');
+  const geo = new THREE.BoxGeometry(30, 40, 0.1);
+  const mat = new THREE.MeshBasicMaterial({ map: handsomeTexture, color: 0x808080 });
+  const cube = new THREE.Mesh(geo, mat);
+  cube.position.set(-12.5, -14.5, 1.1);
+  cube.scale.set(0.1, 0.1, 0.1);
+  cube.rotation.y = Math.PI / 1.4;
+  cube.visible = false;
+  scene.add(cube);
 
-  //ข้อมูลความลับ
+  // โม KU (ซ่อนไว้ก่อน)
+  const loader_4 = new THREE.GLTFLoader();
+  loader_4.load(
+    'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/kku.glb',
+    function (gltf) {
+      kuModel = gltf.scene;
+      kuModel.position.set(-9, -19, 8);
+      kuModel.scale.set(1, 1, 1);
+      kuModel.visible = false;
+      scene.add(kuModel);
+    },
+  );
+
+  // โม next (ซ่อนไว้ก่อน)
+  const loader_5 = new THREE.GLTFLoader();
+  loader_5.load(
+    'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/next.glb',
+    function (gltf) {
+      nextModel = gltf.scene;
+      nextModel.position.set(-9, -15.5, 10);
+      nextModel.scale.set(1, 1, 1);
+      nextModel.rotation.y = Math.PI / 1.7;
+      nextModel.visible = false;
+      scene.add(nextModel);
+    },
+  );
+
+  // โม back (ซ่อนไว้ก่อน)
+  const loader_6 = new THREE.GLTFLoader();
+  loader_6.load(
+    'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/back.glb',
+    function (gltf) {
+      backModel = gltf.scene;
+      backModel.position.set(-9, -12.5, 10);
+      backModel.scale.set(1, 1, 1);
+      backModel.rotation.y = Math.PI / 1.7;
+      backModel.visible = false;
+      scene.add(backModel);
+    },
+  );
+
+  // ข้อมูลความลับ
   const loader_3 = new THREE.GLTFLoader();
   loader_3.load(
     'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/aboutme.glb', 
     function (gltf) {
-      const model = gltf.scene;
-      model.position.set(-2, 4, -2);
-      model.scale.set(2, 2, 2);
-      scene.add(model);
+      aboutmeModel = gltf.scene;
+      aboutmeModel.position.set(-2, 4, -2);
+      aboutmeModel.scale.set(2, 2, 2);
+      scene.add(aboutmeModel);
 
+      // ระบบคลิก
       const raycaster = new THREE.Raycaster();
       const pointer = new THREE.Vector2();
-      let moveTarget = null; 
 
       function setPointer(e) {
         const r = renderer.domElement.getBoundingClientRect();
@@ -108,57 +180,139 @@
         pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
       }
 
-      // คลิกโม
       renderer.domElement.addEventListener('click', (e) => {
         setPointer(e);
         raycaster.setFromCamera(pointer, camera);
-        const intersects = raycaster.intersectObject(model, true); // ตรวจคลิกเฉพาะ aboutme.glb
-        if (intersects.length > 0) {
-          // ถ้าคลิกโดน 
-          moveTarget = {
-            pos: new THREE.Vector3(-25, -12, 16), 
-            tar: new THREE.Vector3(-2, -10, 4)   
-          };
+        
+        // ตรวจสอบคลิก aboutme (กดได้ทุกเมื่อเพื่อรีเซ็ต)
+        const aboutmeIntersects = raycaster.intersectObject(aboutmeModel, true);
+        if (aboutmeIntersects.length > 0) {
+          // ถ้ากด aboutme ตอนอยู่หน้าอื่น = กลับไปหน้าหลัก
+          if (currentStep !== 0) {
+            currentStep = 0;
+            // ซ่อนทุกอย่าง
+            if (nameModel) nameModel.visible = false;
+            cube.visible = false;
+            if (nextModel) nextModel.visible = false;
+            if (kuModel) kuModel.visible = false;
+            if (backModel) backModel.visible = false;
+            
+            // กล้องกลับไปตำแหน่งเริ่มต้น
+            moveTarget = {
+              pos: new THREE.Vector3(-0.5, 15, 18),
+              tar: new THREE.Vector3(0, 0, 0)
+            };
+            return;
+          }
+          // ถ้ากด aboutme ตอนหน้าหลัก = ไปหน้าชื่อ+รูป
+          else {
+            currentStep = 1;
+            // แสดงชื่อ + รูป + ปุ่ม next + ปุ่ม back
+            if (nameModel) nameModel.visible = true;
+            cube.visible = true;
+            if (nextModel) nextModel.visible = true;
+            if (backModel) backModel.visible = true;
+            // ซ่อน KU
+            if (kuModel) kuModel.visible = false;
+            
+            moveTarget = {
+              pos: new THREE.Vector3(-25, -12, 16),
+              tar: new THREE.Vector3(-2, -10, 4)
+            };
+            return;
+          }
+        }
+        
+        // คลิก next
+        if (currentStep === 1 && nextModel) {
+          const nextIntersects = raycaster.intersectObject(nextModel, true);
+          if (nextIntersects.length > 0) {
+            currentStep = 2;
+            // ซ่อนชื่อ + รูป + ปุ่ม next
+            if (nameModel) nameModel.visible = false;
+            cube.visible = false;
+            if (nextModel) nextModel.visible = false;
+            // แสดง KU + ปุ่ม back
+            if (kuModel) kuModel.visible = true;
+            if (backModel) backModel.visible = true;
+            
+            // กล้องโฟกัสไปที่ KU (ระยะเท่ากับดูชื่อ)
+            moveTarget = {
+              pos: new THREE.Vector3(-25, -12, 16),
+              tar: new THREE.Vector3(-2, -10, 4)
+            };
+            return;
+          }
+        }
+        
+        // คลิก back
+        if (backModel && currentStep !== 0) {
+          const backIntersects = raycaster.intersectObject(backModel, true);
+          if (backIntersects.length > 0) {
+            // ถ้าอยู่หน้า 2 (KU) ย้อนกลับไปหน้า 1 (ชื่อ+รูป)
+            if (currentStep === 2) {
+              currentStep = 1;
+              // ซ่อน KU
+              if (kuModel) kuModel.visible = false;
+              // แสดงชื่อ + รูป + ปุ่ม next
+              if (nameModel) nameModel.visible = true;
+              cube.visible = true;
+              if (nextModel) nextModel.visible = true;
+              if (backModel) backModel.visible = true;
+              
+              moveTarget = {
+              pos: new THREE.Vector3(-25, -12, 16),
+              tar: new THREE.Vector3(-2, -10, 4)
+              };
+            }
+            // ถ้าอยู่หน้า 1 (ชื่อ+รูป) ย้อนกลับไปหน้าหลัก
+            else if (currentStep === 1) {
+              currentStep = 0;
+              // ซ่อนทุกอย่าง
+              if (nameModel) nameModel.visible = false;
+              cube.visible = false;
+              if (nextModel) nextModel.visible = false;
+              if (backModel) backModel.visible = false;
+              
+              // กล้องกลับไปตำแหน่งเริ่มต้น
+              moveTarget = {
+                pos: new THREE.Vector3(-0.5, 15, 18),
+                tar: new THREE.Vector3(0, 0, 0)
+              };
+            }
+          }
         }
       });
 
-    let t = 0;
-    (function loop() {
-      t += 0.01;
-      dir.position.x = 3 + Math.sin(t) * 1.0;
+      // วนลูปเรนเดอร์
+      let t = 0;
+      (function loop() {
+        t += 0.01;
+        dir.position.x = 3 + Math.sin(t) * 1.0;
 
-      if (moveTarget) {
-        camera.position.lerp(moveTarget.pos, 0.05);
-        controls.target.lerp(moveTarget.tar, 0.05);
-        
-        if (camera.position.distanceTo(moveTarget.pos) < 0.1) {
-          controls.enabled = true;
-          moveTarget = null;
+        if (moveTarget) {
+          camera.position.lerp(moveTarget.pos, 0.05);
+          controls.target.lerp(moveTarget.tar, 0.05);
+
+          if (camera.position.distanceTo(moveTarget.pos) < 0.1) {
+            controls.enabled = true;
+            moveTarget = null;
+          }
         }
-      }
 
-      controls.update();
-      renderer.render(scene, camera);
-      requestAnimationFrame(loop);
-    })();
-  }
-);
+        controls.update();
+        renderer.render(scene, camera);
+        requestAnimationFrame(loop);
+      })();
+    }
+  );
 
+  // ปรับขนาดเมื่อเปลี่ยนหน้าจอ
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
   });
-
-   let t = 0;
-  (function loop(){
-    t += 0.01;
-    ball.rotation.y += 0.01;
-    dir.position.x = 3 + Math.sin(t)*1.0;
-    renderer.render(scene, camera);
-    requestAnimationFrame(loop);
-  })();
 </script>
 </body>
 </html>
-
