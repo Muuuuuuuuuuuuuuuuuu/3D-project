@@ -19,8 +19,9 @@
 </head>
 <body>
 <script>
-  // Scene / Camera / Renderer
   const scene = new THREE.Scene();
+  // ฉากสีอ่อน + มองทะลุเห็น "พื้น" ด้านหลังวัตถุได้
+  scene.background = new THREE.Color(0x000000);
 
   const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
   camera.position.set(-0.5, 15, 18);
@@ -35,9 +36,8 @@
   document.body.appendChild(renderer.domElement);
 
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
 
-  // แสง
+   // แสง
   scene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 0.6));
   const dir = new THREE.DirectionalLight(0xffffff, 3.0);
   dir.position.set(3, 5, 2);
@@ -64,37 +64,68 @@
       }
     );
 
+  // ตัวแปรเก็บโมเดล
+  let birdModel, scoreModel;
+  let scoreTimeout = null;
+  let nameModel, kuModel, nextModel, aboutmeModel, backModel;
+  let currentStep = 0;
+  let moveTarget = null;
+
   // โมนก
-  const loader_111 = new THREE.GLTFLoader();
-  loader_111.load(
+  const loader_0 = new THREE.GLTFLoader();
+  loader_0.load(
     'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/bird.glb',
     function (gltf) {
-      const model = gltf.scene;
-      model.position.set(5, 11, 11);
-      model.scale.set(2, 2, 2);
-      model.rotation.y = Math.PI / 10;
-      scene.add(model);
+      birdModel = gltf.scene;
+      birdModel.position.set(5, 11, 11);
+      birdModel.scale.set(2, 2, 2);
+      birdModel.rotation.y = Math.PI / 10;
+      
+     birdModel.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      
+      scene.add(birdModel);
+    },
+  );
+
+  // โมคะแนน
+  const loader_10 = new THREE.GLTFLoader();
+  loader_10.load(
+    'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/score.glb',
+    function (gltf) {
+      scoreModel = gltf.scene;
+      scoreModel.position.set(-1, 11, 12);
+      scoreModel.scale.set(1, 1, 1);
+      scoreModel.visible = false;
+      scene.add(scoreModel);
     },
   );
 
   // โมหลัง
   const loader_1 = new THREE.GLTFLoader();
   loader_1.load(
-    'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/sky.glb',
+    'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/house.glb',
     function (gltf) {
       const model = gltf.scene;
       model.position.set(0, 2, 0);
       model.scale.set(0.5, 0.5, 0.5);
+      
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      
       scene.add(model);
     },
   );
 
-  // ตัวแปรเก็บโมเดลและสถานะ
-  let nameModel, kuModel, nextModel, aboutmeModel, backModel;
-  let currentStep = 0; // 0=หน้าหลัก, 1=แสดงชื่อ+รูป, 2=แสดง KU
-  let moveTarget = null;
-
-  // โมชื่อ (ซ่อนไว้ก่อน)
+  // โมชื่อ
   const loader_2 = new THREE.GLTFLoader();
   loader_2.load(
     'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/nname.glb',
@@ -103,11 +134,19 @@
       nameModel.position.set(-9, -19, 8);
       nameModel.scale.set(1, 1, 1);
       nameModel.visible = false;
+      
+      nameModel.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      
       scene.add(nameModel);
     },
   );
 
-  // รูปคนน่ารัก (ซ่อนไว้ก่อน)
+  // รูปคนน่ารัก
   const textureLoader = new THREE.TextureLoader();
   const handsomeTexture = textureLoader.load('https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/picture.jpg');
   const geo = new THREE.BoxGeometry(30, 40, 0.1);
@@ -117,9 +156,11 @@
   cube.scale.set(0.1, 0.1, 0.1);
   cube.rotation.y = Math.PI / 1.4;
   cube.visible = false;
+  cube.castShadow = true;
+  cube.receiveShadow = true;
   scene.add(cube);
 
-  // โม KU (ซ่อนไว้ก่อน)
+  // โม KU
   const loader_4 = new THREE.GLTFLoader();
   loader_4.load(
     'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/kku.glb',
@@ -128,11 +169,18 @@
       kuModel.position.set(-9, -19, 8);
       kuModel.scale.set(1, 1, 1);
       kuModel.visible = false;
+      
+      kuModel.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
       scene.add(kuModel);
     },
   );
 
-  // โม next (ซ่อนไว้ก่อน)
+  // โมถัดไป
   const loader_5 = new THREE.GLTFLoader();
   loader_5.load(
     'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/next.glb',
@@ -142,11 +190,19 @@
       nextModel.scale.set(1, 1, 1);
       nextModel.rotation.y = Math.PI / 1.7;
       nextModel.visible = false;
+      
+      nextModel.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      
       scene.add(nextModel);
     },
   );
 
-  // โม back (ซ่อนไว้ก่อน)
+  // โมกลับ
   const loader_6 = new THREE.GLTFLoader();
   loader_6.load(
     'https://muuuuuuuuuuuuuuuuuu.github.io/3D-project/back.glb',
@@ -156,6 +212,14 @@
       backModel.scale.set(1, 1, 1);
       backModel.rotation.y = Math.PI / 1.7;
       backModel.visible = false;
+      
+      backModel.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      
       scene.add(backModel);
     },
   );
@@ -168,9 +232,16 @@
       aboutmeModel = gltf.scene;
       aboutmeModel.position.set(-2, 4, -2);
       aboutmeModel.scale.set(2, 2, 2);
+      
+      aboutmeModel.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      
       scene.add(aboutmeModel);
 
-      // ระบบคลิก
       const raycaster = new THREE.Raycaster();
       const pointer = new THREE.Vector2();
 
@@ -184,35 +255,47 @@
         setPointer(e);
         raycaster.setFromCamera(pointer, camera);
         
-        // ตรวจสอบคลิก aboutme (กดได้ทุกเมื่อเพื่อรีเซ็ต)
+        if (birdModel) {
+          const birdIntersects = raycaster.intersectObject(birdModel, true);
+          if (birdIntersects.length > 0) {
+            if (scoreModel) {
+              scoreModel.visible = true;
+              
+              if (scoreTimeout) {
+                clearTimeout(scoreTimeout);
+              }
+              
+              scoreTimeout = setTimeout(() => {
+                scoreModel.visible = false;
+                scoreTimeout = null;
+              }, 3000);
+            }
+            return;
+          }
+        }
+        
         const aboutmeIntersects = raycaster.intersectObject(aboutmeModel, true);
         if (aboutmeIntersects.length > 0) {
-          // ถ้ากด aboutme ตอนอยู่หน้าอื่น = กลับไปหน้าหลัก
           if (currentStep !== 0) {
             currentStep = 0;
-            // ซ่อนทุกอย่าง
             if (nameModel) nameModel.visible = false;
             cube.visible = false;
             if (nextModel) nextModel.visible = false;
             if (kuModel) kuModel.visible = false;
             if (backModel) backModel.visible = false;
             
-            // กล้องกลับไปตำแหน่งเริ่มต้น
             moveTarget = {
               pos: new THREE.Vector3(-0.5, 15, 18),
               tar: new THREE.Vector3(0, 0, 0)
             };
             return;
           }
-          // ถ้ากด aboutme ตอนหน้าหลัก = ไปหน้าชื่อ+รูป
           else {
             currentStep = 1;
-            // แสดงชื่อ + รูป + ปุ่ม next + ปุ่ม back
             if (nameModel) nameModel.visible = true;
             cube.visible = true;
             if (nextModel) nextModel.visible = true;
             if (backModel) backModel.visible = true;
-            // ซ่อน KU
             if (kuModel) kuModel.visible = false;
             
             moveTarget = {
@@ -223,20 +306,16 @@
           }
         }
         
-        // คลิก next
         if (currentStep === 1 && nextModel) {
           const nextIntersects = raycaster.intersectObject(nextModel, true);
           if (nextIntersects.length > 0) {
             currentStep = 2;
-            // ซ่อนชื่อ + รูป + ปุ่ม next
             if (nameModel) nameModel.visible = false;
             cube.visible = false;
             if (nextModel) nextModel.visible = false;
-            // แสดง KU + ปุ่ม back
             if (kuModel) kuModel.visible = true;
             if (backModel) backModel.visible = true;
             
-            // กล้องโฟกัสไปที่ KU (ระยะเท่ากับดูชื่อ)
             moveTarget = {
               pos: new THREE.Vector3(-25, -12, 16),
               tar: new THREE.Vector3(-2, -10, 4)
@@ -245,36 +324,29 @@
           }
         }
         
-        // คลิก back
         if (backModel && currentStep !== 0) {
           const backIntersects = raycaster.intersectObject(backModel, true);
           if (backIntersects.length > 0) {
-            // ถ้าอยู่หน้า 2 (KU) ย้อนกลับไปหน้า 1 (ชื่อ+รูป)
             if (currentStep === 2) {
               currentStep = 1;
-              // ซ่อน KU
               if (kuModel) kuModel.visible = false;
-              // แสดงชื่อ + รูป + ปุ่ม next
               if (nameModel) nameModel.visible = true;
               cube.visible = true;
               if (nextModel) nextModel.visible = true;
               if (backModel) backModel.visible = true;
               
               moveTarget = {
-              pos: new THREE.Vector3(-25, -12, 16),
-              tar: new THREE.Vector3(-2, -10, 4)
+                pos: new THREE.Vector3(-25, -12, 16),
+                tar: new THREE.Vector3(-2, -10, 4)
               };
             }
-            // ถ้าอยู่หน้า 1 (ชื่อ+รูป) ย้อนกลับไปหน้าหลัก
             else if (currentStep === 1) {
               currentStep = 0;
-              // ซ่อนทุกอย่าง
               if (nameModel) nameModel.visible = false;
               cube.visible = false;
               if (nextModel) nextModel.visible = false;
               if (backModel) backModel.visible = false;
               
-              // กล้องกลับไปตำแหน่งเริ่มต้น
               moveTarget = {
                 pos: new THREE.Vector3(-0.5, 15, 18),
                 tar: new THREE.Vector3(0, 0, 0)
@@ -284,7 +356,6 @@
         }
       });
 
-      // วนลูปเรนเดอร์
       let t = 0;
       (function loop() {
         t += 0.01;
@@ -307,7 +378,6 @@
     }
   );
 
-  // ปรับขนาดเมื่อเปลี่ยนหน้าจอ
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
