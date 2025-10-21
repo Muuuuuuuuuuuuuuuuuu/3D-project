@@ -20,7 +20,6 @@
 <body>
 <script>
   const scene = new THREE.Scene();
-  // ฉากสีอ่อน + มองทะลุเห็น "พื้น" ด้านหลังวัตถุได้
   scene.background = new THREE.Color(0x000000);
 
   const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
@@ -37,12 +36,204 @@
 
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
 
-   // แสง
+  // แสง
   scene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 0.6));
   const dir = new THREE.DirectionalLight(0xffffff, 3.0);
   dir.position.set(3, 5, 2);
   dir.castShadow = true;
   scene.add(dir);
+
+  const ellipseUniforms = {
+    uTime: { value: 0.0 },
+    uLightDir: { value: new THREE.Vector3(0.4, 1.0, 0.8).normalize() },
+    uTex: { value: new THREE.TextureLoader().load('https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/UV_checker_Map_byValle.jpg/1200px-UV_checker_Map_byValle.jpg') }
+  };
+
+  const ellipseVertShader = `
+    uniform float uTime;
+    varying vec3 vNormal;
+    varying vec3 vPosW;
+    varying vec2 vUv;
+
+    void main(){
+      vNormal = normalize(mat3(modelMatrix) * normal);
+      vUv = uv;
+      vec3 pos = position;
+      vPosW = (modelMatrix * vec4(pos, 1.0)).xyz;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+    }
+  `;
+
+  const ellipseFragShader = `
+    precision mediump float;
+    varying vec3 vNormal;
+    uniform vec3 uLightDir;
+    varying vec3 vPosW;
+    varying vec2 vUv;
+    uniform sampler2D uTex;
+    uniform float uTime;
+    
+    void main() {
+      // Cell Shading (Toon)
+      float diffuse = max(dot(vNormal, uLightDir), 0.0);
+      float levels = 4.0;
+      diffuse = ceil(diffuse * levels) / levels;
+      
+      // Phong Specular
+      vec3 R = reflect(-uLightDir, vNormal);
+      vec3 V = normalize(cameraPosition - vPosW);
+      float specular = max(pow(dot(R, V), 8.0), 0.0);
+      specular = smoothstep(0.4, 0.6, specular);
+      specular *= diffuse;
+      
+      // Texture
+      vec3 base = texture2D(uTex, vUv).rgb;
+      
+      // Animation effect
+      base += 0.1 * sin(vPosW.y * 2.0 + uTime);
+      
+      vec3 color = (base * diffuse) + vec3(specular);
+      
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `;
+
+  const ellipseGeometry = new THREE.SphereGeometry(2, 64, 64);
+  ellipseGeometry.scale(1, 1, 1);
+  
+  const ellipseMaterial = new THREE.ShaderMaterial({
+    uniforms: ellipseUniforms,
+    vertexShader: ellipseVertShader,
+    fragmentShader: ellipseFragShader,
+    side: THREE.DoubleSide
+  });
+
+  const ellipseMesh = new THREE.Mesh(ellipseGeometry, ellipseMaterial);
+  ellipseMesh.position.set(0, 25, 0);
+  ellipseMesh.castShadow = true;
+  ellipseMesh.receiveShadow = true;
+  scene.add(ellipseMesh);
+
+  const sphereUniforms = {
+    uTime: { value: 0.0 },
+    uLightDir: { value: new THREE.Vector3(0.4, 1.0, 0.8).normalize() }
+  };
+
+  const sphereVertShader = `
+    uniform float uTime;
+    varying vec3 vNormal;
+    varying vec3 vPosW;
+
+    void main(){
+      vNormal = normalize(mat3(modelMatrix) * normal);
+      vec3 pos = position;
+      vPosW = (modelMatrix * vec4(pos, 1.0)).xyz;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+    }
+  `;
+
+  const sphereFragShader = `
+    precision mediump float;
+    varying vec3 vNormal;
+    uniform vec3 uLightDir;
+    varying vec3 vPosW;
+    
+    void main() {
+      // Lambert (diffuse)
+      float diffuse = max(dot(vNormal, uLightDir), 0.0);   
+
+      // Phong (specular)
+      vec3 R = reflect(-uLightDir, vNormal);
+      vec3 V = normalize(cameraPosition - vPosW);
+      float specular = clamp(pow(max(dot(R, V), 0.0), 16.0), 0.0, 1.0);
+
+      gl_FragColor = (vec4(1.0, 1.0, 0.5, 1.0) * diffuse) + vec4(specular);
+    }
+  `;
+
+  const sphereGeo = new THREE.SphereBufferGeometry(1.5, 64, 64);
+  const sphereMat = new THREE.ShaderMaterial({
+    vertexShader: sphereVertShader,
+    fragmentShader: sphereFragShader,
+    uniforms: sphereUniforms
+  });
+
+  const sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
+  sphereMesh.position.set(-18, 25, -5);
+  sphereMesh.castShadow = true;
+  sphereMesh.receiveShadow = true;
+  scene.add(sphereMesh);
+
+  const torusUniforms = {
+    uColor: { value: new THREE.Color(0xF893B5) },
+    time: { value: 1.0 },
+    uLightDos: { value: new THREE.Vector3(0.5, 0.9, 0.3).normalize() }
+  };
+
+  const torusVertShader = `
+    varying vec2 vUv;
+    uniform float time;
+    varying vec3 vPosition;
+    varying vec3 vNormal;
+
+    void main() {
+      vUv = uv;
+      vNormal = normalize(normalMatrix * normal); 
+      vPosition = vec3(cos(time)*0.1, 0.0, sin(time)*0.1);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position + vPosition, 1.0);
+    }
+  `;
+
+  const torusFragShader = `
+    precision highp float;
+    varying vec2 vUv;
+    uniform vec3 uColor; 
+    uniform vec3 uLightDos;
+    varying vec3 vNormal;
+
+    void main() {
+      float g = dot(vNormal, uLightDos);
+      gl_FragColor = vec4(mix(uColor*0.03, uColor, g), 1.0);
+    }
+  `;
+
+  const torusGeo = new THREE.TorusBufferGeometry(1.5, 0.5, 16, 32);
+  const torusMat = new THREE.ShaderMaterial({ 
+    vertexShader: torusVertShader, 
+    fragmentShader: torusFragShader, 
+    uniforms: torusUniforms 
+  });
+
+  const torusMesh = new THREE.Mesh(torusGeo, torusMat);
+  torusMesh.position.set(15, 25, -3);
+  torusMesh.castShadow = true;
+  torusMesh.receiveShadow = true;
+  scene.add(torusMesh);
+
+  const cubeUrls = [
+    'https://threejs.org/examples/textures/cube/Bridge2/posx.jpg',
+    'https://threejs.org/examples/textures/cube/Bridge2/negx.jpg',
+    'https://threejs.org/examples/textures/cube/Bridge2/posy.jpg',
+    'https://threejs.org/examples/textures/cube/Bridge2/negy.jpg',
+    'https://threejs.org/examples/textures/cube/Bridge2/posz.jpg',
+    'https://threejs.org/examples/textures/cube/Bridge2/negz.jpg'
+  ];
+  const pbrEnvMap = new THREE.CubeTextureLoader().load(cubeUrls);
+  pbrEnvMap.encoding = THREE.sRGBEncoding;
+
+  const pbrGeo = new THREE.SphereBufferGeometry(1.2, 64, 64);
+  const pbrMat = new THREE.MeshStandardMaterial({ 
+    color: 0x009688,
+    metalness: 0.9,
+    roughness: 0.1,
+    envMap: pbrEnvMap
+  });
+
+  const pbrMesh = new THREE.Mesh(pbrGeo, pbrMat);
+  pbrMesh.position.set(8, 25, 5);
+  pbrMesh.castShadow = true;
+  pbrMesh.receiveShadow = true;
+  scene.add(pbrMesh);
 
   // HDR Environment Map
   const pmremGenerator = new THREE.PMREMGenerator(renderer);
@@ -360,6 +551,24 @@
       (function loop() {
         t += 0.01;
         dir.position.x = 3 + Math.sin(t) * 1.0;
+        
+        ellipseUniforms.uTime.value = t;
+        ellipseMesh.rotation.y = t * 0.3;
+
+        sphereUniforms.uTime.value = t;
+        sphereUniforms.uLightDir.value.set(
+          Math.sin(t), 
+          1.0, 
+          Math.cos(t)
+        ).normalize();
+        sphereMesh.rotation.y = t * 0.2;
+
+        torusUniforms.time.value += 0.05;
+        torusMesh.rotation.x = t * 0.15;
+        torusMesh.rotation.y = t * 0.2;
+        
+        pbrMesh.rotation.x += 0.01;
+        pbrMesh.rotation.y += 0.015;
 
         if (moveTarget) {
           camera.position.lerp(moveTarget.pos, 0.05);
